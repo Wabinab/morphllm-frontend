@@ -1,15 +1,10 @@
 <div class="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
   
   <!-- Left Hand Side Offcanvas Panel / Sidebar -->
-  <app-sidebar
-    [isOpen]="isSidebarOpen"
-    [sessions]="sessions"
-    [currentSessionId]="currentSessionId"
-    [currentBearerToken]="morphConfig?.apiKey || ''"
-    (closeSidebar)="closeSidebar()"
-    (selectSession)="selectSession($event)"
-    (newChat)="createNewChat()"
-    (deleteSession)="deleteSession($event)"
+  <app-sidebar [isOpen]="isSidebarOpen()" [sessions]="sessions()"
+    [currentSessionId]="currentSessionId()" [currentBearerToken]="morphConfig().apiKey"
+    (closeSidebar)="closeSidebar()" (selectSession)="selectSession($event)"
+    (newChat)="createNewChat()" (deleteSession)="deleteSession($event)"
     (saveBearerToken)="handleSaveBearerToken($event)"
   />
 
@@ -20,9 +15,7 @@
     <header class="h-14 border-b border-slate-800/80 px-4 flex items-center justify-between bg-slate-900/40 backdrop-blur-md z-10 shrink-0">
       <div class="flex items-center gap-3">
         <!-- Sidebar Toggle (offcanvas trigger) -->
-        <button
-          type="button"
-          (click)="toggleSidebar()"
+        <button type="button" (click)="toggleSidebar()"
           class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
           title="Toggle conversation list"
         >
@@ -37,15 +30,13 @@
             MorphLLM
           </h1>
           <!-- Inline Model Switcher: immediately changes active model -->
-          @if (morphConfig?.modelsList?.length > 0) {
+          @if (morphConfig().modelsList.length > 0) {
             <div class="relative flex items-center">
-              <select
-                [ngModel]="morphConfig.model"
-                (ngModelChange)="switchModel($event)"
+              <select [ngModel]="morphConfig().model" (ngModelChange)="switchModel($event)"
                 class="appearance-none pl-2.5 pr-7 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/60 hover:border-indigo-500/60 text-indigo-300 text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all max-w-[200px]"
                 title="Switch active model instantly"
               >
-                @for (m of morphConfig.modelsList; track m.id) {
+                @for (m of morphConfig().modelsList; track m.id) {
                   <option [value]="m.model" class="bg-slate-900 text-slate-200">
                     {{ m.display }}
                   </option>
@@ -62,9 +53,7 @@
       <!-- Header actions / status -->
       <div class="flex items-center gap-2">
         <!-- Settings button -->
-        <button
-          type="button"
-          (click)="openSettings()"
+        <button type="button" (click)="openSettings()"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 transition-all"
           title="Configure Morph API token and model"
         >
@@ -73,14 +62,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           <span class="hidden sm:inline">Settings</span>
-          @if (!morphConfig.apiKey) {
+          @if (!morphConfig().apiKey) {
             <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
           }
         </button>
 
-        <button
-          type="button"
-          (click)="createNewChat()"
+        <button type="button" (click)="createNewChat()"
           class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-600/20 transition-all"
         >
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -92,7 +79,7 @@
     </header>
 
     <!-- Missing API Key Banner Warning if applicable -->
-    @if (!morphConfig.apiKey) {
+    @if (!morphConfig().apiKey) {
       <div class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs text-amber-200">
         <div class="flex items-center gap-2">
           <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,11 +97,10 @@
     }
 
     <!-- Chat Messages Scroll Area -->
-    <div 
-      #messagesContainer 
+    <div #messagesContainer 
       class="flex-1 overflow-y-auto px-4 py-6 space-y-4 scroll-smooth custom-scrollbar"
     >
-      @if (messages.length === 0) {
+      @if (messages().length === 0) {
         <!-- Empty State Hero -->
         <div class="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-12 px-4 select-none">
           <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center shadow-xl shadow-indigo-500/20 mb-6 text-white">
@@ -124,7 +110,7 @@
           </div>
           <h2 class="text-xl font-bold text-slate-100 mb-2">MorphLLM Assistant</h2>
           <p class="text-sm text-slate-400 mb-6 leading-relaxed">
-            Connected via <code class="text-indigo-400 font-mono text-xs">POST https://api.morphllm.com/v1/messages</code> using model <span class="text-slate-200 font-semibold">{{ morphConfig.model }}</span>. Paste long text (&gt; 750 chars), images, or videos into the chat box!
+            Connected via <code class="text-indigo-400 font-mono text-xs">POST https://api.morphllm.com/v1/messages</code> using model <span class="text-slate-200 font-semibold">{{ morphConfig().model }}</span>. Paste long text (&gt; 750 chars), images, or videos into the chat box!
           </p>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">
@@ -148,15 +134,13 @@
       }
 
       <!-- Message History List -->
-      @for (msg of messages; track msg.id) {
-        <app-chat-message 
-          [message]="msg" 
-          (inspectAttachment)="inspectAttachment($event)"
+      @for (msg of messages(); track msg.id) {
+        <app-chat-message [message]="msg" (inspectAttachment)="inspectAttachment($event)"
         />
       }
 
       <!-- AI Generating Indicator -->
-      @if (isAiResponding) {
+      @if (isAiResponding()) {
         <div class="flex items-center gap-3 max-w-4xl mx-auto py-2">
           <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/20 text-white">
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -166,7 +150,7 @@
           </div>
           <div class="flex items-center gap-2 px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-sm text-xs text-slate-400">
             <span class="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
-            <span>Morph ({{ morphConfig.model }}) is generating response...</span>
+            <span>Morph ({{ morphConfig().model }}) is generating response...</span>
           </div>
         </div>
       }
@@ -174,9 +158,7 @@
 
     <!-- Bottom Input Container with Pasted Square Boxes Area -->
     <div class="p-4 sm:p-6 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent shrink-0">
-      <app-chat-input 
-        [disabled]="isAiResponding"
-        (onSend)="handleSendMessage($event)" 
+      <app-chat-input [disabled]="isAiResponding()" (onSend)="handleSendMessage($event)" 
         (inspectAttachment)="inspectAttachment($event)"
       />
     </div>
@@ -184,17 +166,13 @@
   </main>
 
   <!-- Attachment Detail / Reader Modal -->
-  <app-preview-modal 
-    [attachment]="selectedAttachmentForPreview" 
+  <app-preview-modal [attachment]="selectedAttachmentForPreview()" 
     (onClose)="closePreview()"
   />
 
   <!-- Morph API Settings Modal -->
-  <app-settings-modal
-    [isOpen]="isSettingsOpen"
-    [config]="morphConfig"
-    (onClose)="closeSettings()"
-    (onSave)="saveSettings($event)"
+  <app-settings-modal [isOpen]="isSettingsOpen()" [config]="morphConfig()"
+    (onClose)="closeSettings()" (onSave)="saveSettings($event)"
   />
 
 </div>
