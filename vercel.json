@@ -1,6 +1,6 @@
 {
   "outputDirectory": "dist/morphllm-frontend/browser",
-  "functions": { "api/**/*.ts": { "maxDuration": 60 } },
+  "functions": { "api/**/*.mjs": { "maxDuration": 60 } },
   "rewrites": [
     { "source": "/api/morph/:path*", "destination": "/api/morph?p=:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }

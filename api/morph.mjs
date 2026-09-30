@@ -1,7 +1,7 @@
 const ALLOWED_PATHS = new Set(['/v1/messages']);
 
 export default {
-  async fetch(request: Request) {
+  async fetch(request) {
     if (request.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 });
     }
