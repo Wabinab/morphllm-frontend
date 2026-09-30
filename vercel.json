@@ -1,0 +1,4 @@
+{
+  "outputDirectory": "dist/morphllm-frontend/browser",
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
+}
