@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     headers: {
       'content-type': 'application/json',
       authorization: request.headers.get('authorization') ?? '',
+      'anthropic-version': request.headers.get('anthropic-version') ?? '2023-06-01',
     },
     body: await request.text(),
   });

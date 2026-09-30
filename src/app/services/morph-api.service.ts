@@ -27,7 +27,7 @@ export class MorphApiService {
   // Default configuration
   private config: MorphConfig = {
     apiKey: '',
-    baseUrl: 'https://api.morphllm.com/v1',
+    baseUrl: '/api/morph/v1',
     model: 'morph-glm53-744b',
     modelsList: [...this.defaultModels],
     maxTokens: 50000,
