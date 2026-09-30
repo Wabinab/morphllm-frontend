@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StorageService } from './services/storage.service';
@@ -26,82 +26,90 @@ import { SettingsModalComponent } from './components/settings-modal.component';
   styleUrl: './app.css',
 })
 export class App implements OnInit {
+  // Services first: field initializers below depend on them.
+  private storageService = inject(StorageService);
+  private morphApiService = inject(MorphApiService);
+
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef<HTMLDivElement>;
 
-  sessions: ChatSession[] = [];
-  currentSessionId: string | null = null;
-  messages: ChatMessage[] = [];
-  
-  isSidebarOpen = false;
-  isAiResponding = false;
-  isSettingsOpen = false;
-  errorMessage: string | null = null;
+  // All state the template reads is a signal, so any change schedules a render
+  // (required in zoneless apps, where plain property mutation renders nothing).
+  sessions = signal<ChatSession[]>([]);
+  currentSessionId = signal<string | null>(null);
+  messages = signal<ChatMessage[]>([]);
 
-  selectedAttachmentForPreview: Attachment | null = null;
-  morphConfig!: MorphConfig;
+  isSidebarOpen = signal(false);
+  isAiResponding = signal(false);
+  isSettingsOpen = signal(false);
+  errorMessage = signal<string | null>(null);
+  selectedAttachmentForPreview = signal<Attachment | null>(null);
 
-  get activeModelDisplay(): string {
-    if (!this.morphConfig) return '';
-    const item = this.morphConfig.modelsList?.find((m) => m.model === this.morphConfig.model);
-    return item ? `${item.display} (${item.model})` : this.morphConfig.model;
-  }
+  // getConfig() is synchronous and returns defaults until IndexedDB finishes loading,
+  // so the signal always holds a real value (no null, no `!`). ngOnInit swaps in the saved config.
+  morphConfig = signal<MorphConfig>(this.morphApiService.getConfig());
 
-  constructor(
-    private storageService: StorageService,
-    private morphApiService: MorphApiService
-  ) {}
+  activeModelDisplay = computed(() => {
+    const cfg = this.morphConfig();
+    const item = cfg.modelsList?.find((m) => m.model === cfg.model);
+    return item ? `${item.display} (${item.model})` : cfg.model;
+  });
 
   async ngOnInit() {
     await this.morphApiService.waitForLoad();
-    this.morphConfig = this.morphApiService.getConfig();
+    this.refreshConfig();
     await this.loadSessions();
-    if (this.sessions.length > 0) {
-      await this.selectSession(this.sessions[0].id);
+    const sessions = this.sessions();
+    if (sessions.length > 0) {
+      await this.selectSession(sessions[0].id);
     } else {
       await this.createNewChat();
     }
   }
 
+  private refreshConfig() {
+    this.morphConfig.set(this.morphApiService.getConfig());
+  }
+
   async loadSessions() {
-    this.sessions = await this.storageService.getSessions();
+    this.sessions.set(await this.storageService.getSessions());
   }
 
   toggleSidebar() {
-    this.isSidebarOpen = !this.isSidebarOpen;
+    this.isSidebarOpen.update((open) => !open);
   }
 
   closeSidebar() {
-    this.isSidebarOpen = false;
+    this.isSidebarOpen.set(false);
   }
 
   openSettings() {
-    this.morphConfig = this.morphApiService.getConfig();
-    this.isSettingsOpen = true;
+    this.refreshConfig();
+    this.isSettingsOpen.set(true);
   }
 
   closeSettings() {
-    this.isSettingsOpen = false;
+    this.isSettingsOpen.set(false);
   }
 
   async saveSettings(newConfig: MorphConfig) {
     await this.morphApiService.saveConfig(newConfig);
-    this.morphConfig = this.morphApiService.getConfig();
-    this.errorMessage = null;
+    this.refreshConfig();
+    this.errorMessage.set(null);
   }
 
   async handleSaveBearerToken(token: string) {
     await this.morphApiService.setApiKey(token);
-    this.morphConfig = this.morphApiService.getConfig();
-    this.errorMessage = null;
+    this.refreshConfig();
+    this.errorMessage.set(null);
   }
 
   /**
-   * Immediately switches the active model — no Settings modal or Save required.
+   * Immediately switches the active model, no Settings modal or Save required.
    * Persists the selection to IndexedDB so it survives page refresh.
    */
   async switchModel(modelId: string) {
     await this.morphApiService.saveConfig({ model: modelId });
-    this.morphConfig = this.morphApiService.getConfig();
+    this.refreshConfig();
   }
 
   async createNewChat() {
@@ -113,26 +121,27 @@ export class App implements OnInit {
     };
 
     await this.storageService.saveSession(newSession);
-    this.sessions.unshift(newSession);
-    this.currentSessionId = newSession.id;
-    this.messages = [];
+    this.sessions.update((list) => [newSession, ...list]);
+    this.currentSessionId.set(newSession.id);
+    this.messages.set([]);
     this.closeSidebar();
   }
 
   async selectSession(sessionId: string) {
-    this.currentSessionId = sessionId;
-    this.messages = await this.storageService.getMessages(sessionId);
+    this.currentSessionId.set(sessionId);
+    this.messages.set(await this.storageService.getMessages(sessionId));
     this.closeSidebar();
     this.scrollToBottom();
   }
 
   async deleteSession(sessionId: string) {
     await this.storageService.deleteSession(sessionId);
-    this.sessions = this.sessions.filter((s) => s.id !== sessionId);
+    this.sessions.update((list) => list.filter((s) => s.id !== sessionId));
 
-    if (this.currentSessionId === sessionId) {
-      if (this.sessions.length > 0) {
-        await this.selectSession(this.sessions[0].id);
+    if (this.currentSessionId() === sessionId) {
+      const remaining = this.sessions();
+      if (remaining.length > 0) {
+        await this.selectSession(remaining[0].id);
       } else {
         await this.createNewChat();
       }
@@ -140,11 +149,11 @@ export class App implements OnInit {
   }
 
   async handleSendMessage(payload: { text: string; attachments: Attachment[] }) {
-    if (!this.currentSessionId) {
+    if (!this.currentSessionId()) {
       await this.createNewChat();
     }
 
-    const sessionId = this.currentSessionId!;
+    const sessionId = this.currentSessionId()!;
 
     const userMessage: ChatMessage = {
       id: 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -154,101 +163,122 @@ export class App implements OnInit {
       timestamp: Date.now(),
     };
 
-    this.messages.push(userMessage);
+    this.messages.update((list) => [...list, userMessage]);
     await this.storageService.saveMessage(sessionId, userMessage);
 
-    // Update conversation title if needed
-    const currentSession = this.sessions.find((s) => s.id === sessionId);
-    if (currentSession && (currentSession.title === 'New Conversation' || !currentSession.title)) {
-      if (payload.text) {
-        currentSession.title = payload.text.substring(0, 32);
-      } else if (payload.attachments.length > 0) {
-        currentSession.title = `${payload.attachments[0].name}`;
+    // Update conversation title / timestamp. Replace the object (don't mutate) so the sidebar re-renders.
+    const current = this.sessions().find((s) => s.id === sessionId);
+    if (current) {
+      let title = current.title;
+      if (current.title === 'New Conversation' || !current.title) {
+        if (payload.text) {
+          title = payload.text.substring(0, 32);
+        } else if (payload.attachments.length > 0) {
+          title = `${payload.attachments[0].name}`;
+        }
       }
-      currentSession.updatedAt = Date.now();
-      await this.storageService.saveSession(currentSession);
-    } else if (currentSession) {
-      currentSession.updatedAt = Date.now();
-      await this.storageService.saveSession(currentSession);
+      const updated: ChatSession = { ...current, title, updatedAt: Date.now() };
+      this.sessions.update((list) => list.map((s) => (s.id === sessionId ? updated : s)));
+      await this.storageService.saveSession(updated);
     }
 
     this.scrollToBottom();
 
-    // Call Morph API
-    await this.callMorphApi(payload);
+    // sessionId is passed explicitly so a reply is saved to the session it was sent from,
+    // even if the user switches sessions while it streams.
+    await this.callMorphApi(sessionId, payload);
   }
 
-  private async callMorphApi(userInput: { text: string; attachments: Attachment[] }) {
-    this.isAiResponding = true;
-    this.errorMessage = null;
+  private async callMorphApi(
+    sessionId: string,
+    userInput: { text: string; attachments: Attachment[] }
+  ) {
+    this.isAiResponding.set(true);
+    this.errorMessage.set(null);
     this.scrollToBottom();
 
-    // Create an assistant message placeholder for streaming
     const aiMessageId = 'msg-ai-' + Date.now();
-    const aiMessage: ChatMessage = {
+    let aiMessage: ChatMessage = {
       id: aiMessageId,
       sender: 'assistant',
       content: '',
       timestamp: Date.now(),
     };
 
+    // Replace the message in the list with a new object on every update.
+    const setAiMessage = (next: ChatMessage) => {
+      aiMessage = next;
+      this.messages.update((list) => list.map((m) => (m.id === aiMessageId ? next : m)));
+    };
+
     try {
-      // Build previous messages context (excluding the message just added)
-      const historyExceptLast = this.messages.slice(0, -1);
-      
+      // Context = everything except the user message just added
+      const historyExceptLast = this.messages().slice(0, -1);
+
       const payload = this.morphApiService.buildPayload(
         historyExceptLast,
         userInput.text,
         userInput.attachments
       );
 
-      // Check if API key is supplied; if not, notify user nicely
-      if (!this.morphConfig.apiKey) {
+      if (!this.morphConfig().apiKey) {
         this.openSettings();
-        throw new Error('Please configure your Morph API Token in Settings or on the LHS panel to send requests to https://api.morphllm.com/v1/messages.');
+        throw new Error(
+          'Please configure your Morph API Token in Settings or on the LHS panel to send requests to https://api.morphllm.com/v1/messages.'
+        );
       }
 
-      // Append assistant placeholder so stream is visible in real-time
-      this.messages.push(aiMessage);
+      // Add the placeholder so the stream is visible in real time
+      this.messages.update((list) => [...list, aiMessage]);
 
-      // Stream the response
       const finalContent = await this.morphApiService.sendMessageStream(payload, (chunkText) => {
-        aiMessage.content = chunkText;
+        setAiMessage({ ...aiMessage, content: chunkText });
         this.scrollToBottom();
       });
 
-      aiMessage.content = finalContent || aiMessage.content;
-      await this.storageService.saveMessage(this.currentSessionId!, aiMessage);
+      if (!finalContent) {
+        console.warn('Stream finished but no text was parsed from it (check the EventStream tab).');
+      }
+
+      setAiMessage({ ...aiMessage, content: finalContent || aiMessage.content });
+      await this.storageService.saveMessage(sessionId, aiMessage);
     } catch (err: any) {
       console.error('Morph API Error:', err);
-      this.errorMessage = err.message || 'An error occurred while connecting to the Morph API.';
+      const text: string = err?.message || 'An error occurred while connecting to the Morph API.';
+      this.errorMessage.set(text);
 
-      // If placeholder was added with no content, reuse or remove
-      if (this.messages.includes(aiMessage) && !aiMessage.content) {
-        aiMessage.content = `⚠️ ${this.errorMessage}`;
-        await this.storageService.saveMessage(this.currentSessionId!, aiMessage);
+      const placeholderInList = this.messages().some((m) => m.id === aiMessageId);
+
+      if (placeholderInList && !aiMessage.content) {
+        // Reuse the empty placeholder as the error bubble
+        setAiMessage({ ...aiMessage, content: `⚠️ ${text}` });
+        await this.storageService.saveMessage(sessionId, aiMessage);
       } else {
-        const errorMessage: ChatMessage = {
+        // Keep any partial reply that streamed before the failure
+        if (placeholderInList && aiMessage.content) {
+          await this.storageService.saveMessage(sessionId, aiMessage);
+        }
+        const errorMsg: ChatMessage = {
           id: 'msg-err-' + Date.now(),
           sender: 'assistant',
-          content: `⚠️ ${this.errorMessage}`,
+          content: `⚠️ ${text}`,
           timestamp: Date.now(),
         };
-        this.messages.push(errorMessage);
-        await this.storageService.saveMessage(this.currentSessionId!, errorMessage);
+        this.messages.update((list) => [...list, errorMsg]);
+        await this.storageService.saveMessage(sessionId, errorMsg);
       }
     } finally {
-      this.isAiResponding = false;
+      this.isAiResponding.set(false);
       this.scrollToBottom();
     }
   }
 
   inspectAttachment(attachment: Attachment) {
-    this.selectedAttachmentForPreview = attachment;
+    this.selectedAttachmentForPreview.set(attachment);
   }
 
   closePreview() {
-    this.selectedAttachmentForPreview = null;
+    this.selectedAttachmentForPreview.set(null);
   }
 
   scrollToBottom() {
