@@ -1,8 +1,14 @@
+const ALLOWED_PATHS = new Set(['/v1/messages']);
+
 export async function POST(request: Request) {
-  const { pathname, search } = new URL(request.url);
+  const { pathname } = new URL(request.url);
   const path = pathname.replace(/^\/api\/morph/, '');
 
-  const upstream = await fetch(`https://api.morphllm.com${path}${search}`, {
+  if (!ALLOWED_PATHS.has(path)) {
+    return new Response('Not found', { status: 404 });
+  }
+
+  const upstream = await fetch(`https://api.morphllm.com${path}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -16,6 +22,7 @@ export async function POST(request: Request) {
     status: upstream.status,
     headers: {
       'content-type': upstream.headers.get('content-type') ?? 'application/json',
+      'cache-control': 'no-cache, no-transform',
     },
   });
 }
