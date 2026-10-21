@@ -1,7 +1,22 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SecurityContext, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Attachment, ChatMessage } from '../models/chat.model';
 import { PastedCardComponent } from './pasted-card.component';
+import { marked, Renderer } from 'marked';
+import hljs from 'highlight.js';
+
+// ── Configure marked once at module level ────────────────────────────────────
+const _renderer = new Renderer();
+
+_renderer.code = ({ text, lang }: { text: string; lang?: string }): string => {
+  const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
+  const highlighted = hljs.highlight(text, { language, ignoreIllegals: true }).value;
+  const badge = language === 'plaintext' ? '' : language;
+  return `<pre data-lang="${badge}"><code class="hljs language-${language}">${highlighted}</code></pre>`;
+};
+
+marked.use({ renderer: _renderer, breaks: true, gfm: true });
 
 @Component({
   selector: 'app-chat-message',
@@ -63,21 +78,46 @@ import { PastedCardComponent } from './pasted-card.component';
 
         <!-- Text content if present -->
         @if (message.content) {
-          <div 
-            class="rounded-2xl px-4 py-3 text-sm sm:text-base leading-relaxed break-words whitespace-pre-wrap shadow-sm"
-            [ngClass]="{
-              'bg-indigo-600 text-white rounded-tr-sm': message.sender === 'user',
-              'bg-slate-800/90 text-slate-100 rounded-tl-sm border border-slate-700/60': message.sender === 'assistant'
-            }"
-          >{{ message.content }}</div>
+          <!-- User message: plain text bubble -->
+          @if (message.sender === 'user') {
+            <div class="rounded-2xl rounded-tr-sm px-4 py-3 text-sm sm:text-base leading-relaxed break-words whitespace-pre-wrap shadow-sm bg-indigo-600 text-white">
+              {{ message.content }}
+            </div>
+          }
+
+          <!-- Assistant message: rendered markdown -->
+          @if (message.sender === 'assistant') {
+            <div
+              class="prose-ai rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm bg-slate-800/90 border border-slate-700/60 min-w-0 w-full"
+              [innerHTML]="renderedHtml"
+            ></div>
+          }
         }
       </div>
     </div>
   `
 })
-export class ChatMessageComponent {
+export class ChatMessageComponent implements OnChanges {
   @Input({ required: true }) message!: ChatMessage;
   @Output() inspectAttachment = new EventEmitter<Attachment>();
+
+  renderedHtml: SafeHtml = '';
+
+  constructor(private sanitizer: DomSanitizer) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['message'] && this.message?.sender === 'assistant') {
+      this.renderedHtml = this.renderMarkdown(this.message.content);
+    }
+  }
+
+  private renderMarkdown(content: string): SafeHtml {
+    if (!content) return '';
+    const rawHtml = marked.parse(content) as string;
+    // Sanitize first to strip anything dangerous, then trust the result for Angular binding
+    const safe = this.sanitizer.sanitize(SecurityContext.HTML, rawHtml) ?? '';
+    return this.sanitizer.bypassSecurityTrustHtml(safe);
+  }
 
   formatTime(ts: number): string {
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

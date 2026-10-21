@@ -97,12 +97,6 @@ export class App implements OnInit {
     this.errorMessage.set(null);
   }
 
-  async handleSaveBearerToken(token: string) {
-    await this.morphApiService.setApiKey(token);
-    this.refreshConfig();
-    this.errorMessage.set(null);
-  }
-
   /**
    * Immediately switches the active model, no Settings modal or Save required.
    * Persists the selection to IndexedDB so it survives page refresh.

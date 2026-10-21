@@ -31,3 +31,138 @@
 .animate-fade-in {
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ── Markdown prose styles for AI assistant messages ─────────────────────── */
+.prose-ai {
+  color: #cbd5e1; /* slate-300 */
+  font-size: 0.9rem;
+  line-height: 1.75;
+  word-break: break-word;
+}
+
+.prose-ai p {
+  margin: 0.6em 0;
+}
+.prose-ai p:first-child { margin-top: 0; }
+.prose-ai p:last-child  { margin-bottom: 0; }
+
+.prose-ai h1, .prose-ai h2, .prose-ai h3,
+.prose-ai h4, .prose-ai h5, .prose-ai h6 {
+  color: #f1f5f9; /* slate-100 */
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+  line-height: 1.3;
+}
+.prose-ai h1 { font-size: 1.35em; }
+.prose-ai h2 { font-size: 1.2em; }
+.prose-ai h3 { font-size: 1.05em; }
+
+.prose-ai strong { color: #f1f5f9; font-weight: 600; }
+.prose-ai em     { color: #94a3b8; font-style: italic; }
+
+.prose-ai a {
+  color: #818cf8; /* indigo-400 */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-ai a:hover { color: #a5b4fc; }
+
+/* Inline code */
+.prose-ai code:not(pre code) {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;  /* indigo-300 */
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.85em;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+/* Fenced code blocks */
+.prose-ai pre {
+  position: relative;
+  margin: 0.75em 0;
+  border-radius: 10px;
+  border: 1px solid rgba(51, 65, 85, 0.8); /* slate-700 */
+  overflow: hidden;
+}
+
+.prose-ai pre code {
+  display: block;
+  overflow-x: auto;
+  padding: 1em 1.2em;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.82em;
+  line-height: 1.65;
+  background: #0d1117; /* github-dark background */
+  color: #e6edf3;
+}
+
+/* Language label badge */
+.prose-ai pre::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.2em 0.65em;
+  font-size: 0.7em;
+  font-family: ui-monospace, monospace;
+  color: #64748b; /* slate-500 */
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom-left-radius: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Lists */
+.prose-ai ul, .prose-ai ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.prose-ai ul { list-style-type: disc; }
+.prose-ai ol { list-style-type: decimal; }
+.prose-ai li { margin: 0.2em 0; }
+.prose-ai li::marker { color: #6366f1; } /* indigo-500 */
+
+/* Nested lists */
+.prose-ai li > ul, .prose-ai li > ol { margin: 0.1em 0; }
+
+/* Blockquotes */
+.prose-ai blockquote {
+  border-left: 3px solid #6366f1; /* indigo-500 */
+  margin: 0.75em 0;
+  padding: 0.4em 0 0.4em 1em;
+  color: #94a3b8; /* slate-400 */
+  background: rgba(99, 102, 241, 0.06);
+  border-radius: 0 6px 6px 0;
+}
+.prose-ai blockquote p { margin: 0; }
+
+/* Horizontal rule */
+.prose-ai hr {
+  border: none;
+  border-top: 1px solid rgba(51, 65, 85, 0.7);
+  margin: 1em 0;
+}
+
+/* Tables */
+.prose-ai table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+  font-size: 0.88em;
+}
+.prose-ai th, .prose-ai td {
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  padding: 0.45em 0.75em;
+  text-align: left;
+}
+.prose-ai th {
+  background: rgba(30, 41, 59, 0.8); /* slate-800 */
+  color: #f1f5f9;
+  font-weight: 600;
+}
+.prose-ai tr:nth-child(even) td {
+  background: rgba(15, 23, 42, 0.4);
+}
+

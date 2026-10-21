@@ -2,10 +2,9 @@
   
   <!-- Left Hand Side Offcanvas Panel / Sidebar -->
   <app-sidebar [isOpen]="isSidebarOpen()" [sessions]="sessions()"
-    [currentSessionId]="currentSessionId()" [currentBearerToken]="morphConfig().apiKey"
+    [currentSessionId]="currentSessionId()"
     (closeSidebar)="closeSidebar()" (selectSession)="selectSession($event)"
     (newChat)="createNewChat()" (deleteSession)="deleteSession($event)"
-    (saveBearerToken)="handleSaveBearerToken($event)"
   />
 
   <!-- Main Chat Center Stage -->
