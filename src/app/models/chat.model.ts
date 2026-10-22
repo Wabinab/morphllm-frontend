@@ -38,6 +38,8 @@ export interface ChatMessage {
   content: string;
   attachments?: Attachment[];
   timestamp: number;
+  /** Display name of the model that generated this message (assistant only). */
+  modelName?: string;
 }
 
 export interface ChatSession {

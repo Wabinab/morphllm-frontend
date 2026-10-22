@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SecurityContext, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SecurityContext, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Attachment, ChatMessage } from '../models/chat.model';
@@ -13,7 +13,15 @@ _renderer.code = ({ text, lang }: { text: string; lang?: string }): string => {
   const language = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
   const highlighted = hljs.highlight(text, { language, ignoreIllegals: true }).value;
   const badge = language === 'plaintext' ? '' : language;
-  return `<pre data-lang="${badge}"><code class="hljs language-${language}">${highlighted}</code></pre>`;
+  return [
+    `<div class="code-block-wrapper">`,
+    `  <div class="code-block-header">`,
+    `    <span class="code-lang-badge">${badge}</span>`,
+    `    <button class="copy-code-btn" title="Copy code">Copy</button>`,
+    `  </div>`,
+    `  <pre data-lang="${badge}"><code class="hljs language-${language}">${highlighted}</code></pre>`,
+    `</div>`,
+  ].join('');
 };
 
 marked.use({ renderer: _renderer, breaks: true, gfm: true });
@@ -54,11 +62,35 @@ marked.use({ renderer: _renderer, breaks: true, gfm: true });
         <!-- Author & Time -->
         <div class="flex items-center gap-2 text-xs text-slate-400 px-1">
           <span class="font-medium text-slate-300">
-            {{ message.sender === 'assistant' ? 'MorphLLM' : 'You' }}
+            {{ message.sender === 'assistant' ? (message.modelName ?? 'MorphLLM') : 'You' }}
           </span>
           <span>•</span>
           <span>{{ formatTime(message.timestamp) }}</span>
         </div>
+
+        <!-- Copy whole message (assistant only, appears on group hover) -->
+        @if (message.sender === 'assistant') {
+          <button
+            class="copy-msg-btn flex items-center gap-1 text-xs px-2 py-0.5 rounded-md
+                   text-slate-400 hover:text-slate-200 hover:bg-slate-700/60
+                   opacity-0 group-hover:opacity-100 transition-all duration-150"
+            (click)="copyMessage()"
+            title="Copy message"
+          >
+            @if (messageCopied()) {
+              <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+              <span class="text-emerald-400">Copied!</span>
+            } @else {
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16a2 2 0 002 2h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8z" />
+              </svg>
+              <span>Copy</span>
+            }
+          </button>
+        }
 
         <!-- Render Pasted Boxes / Attachments if any -->
         @if (message.attachments && message.attachments.length > 0) {
@@ -90,6 +122,7 @@ marked.use({ renderer: _renderer, breaks: true, gfm: true });
             <div
               class="prose-ai rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm bg-slate-800/90 border border-slate-700/60 min-w-0 w-full"
               [innerHTML]="renderedHtml"
+              (click)="onRenderedClick($event)"
             ></div>
           }
         }
@@ -102,6 +135,7 @@ export class ChatMessageComponent implements OnChanges {
   @Output() inspectAttachment = new EventEmitter<Attachment>();
 
   renderedHtml: SafeHtml = '';
+  messageCopied = signal(false);
 
   constructor(private sanitizer: DomSanitizer) {}
 
@@ -117,6 +151,31 @@ export class ChatMessageComponent implements OnChanges {
     // Sanitize first to strip anything dangerous, then trust the result for Angular binding
     const safe = this.sanitizer.sanitize(SecurityContext.HTML, rawHtml) ?? '';
     return this.sanitizer.bypassSecurityTrustHtml(safe);
+  }
+
+  async copyMessage(): Promise<void> {
+    await navigator.clipboard.writeText(this.message.content);
+    this.messageCopied.set(true);
+    setTimeout(() => this.messageCopied.set(false), 2000);
+  }
+
+  /** Event-delegation handler for code-block copy buttons inside rendered HTML. */
+  onRenderedClick(event: MouseEvent): void {
+    const btn = (event.target as HTMLElement).closest<HTMLElement>('.copy-code-btn');
+    if (!btn) return;
+    event.preventDefault();
+    const wrapper = btn.closest<HTMLElement>('.code-block-wrapper');
+    if (!wrapper) return;
+    const code = wrapper.querySelector('code');
+    const text = code?.textContent ?? '';
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
   }
 
   formatTime(ts: number): string {

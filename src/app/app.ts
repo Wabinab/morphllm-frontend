@@ -54,6 +54,13 @@ export class App implements OnInit {
     return item ? `${item.display} (${item.model})` : cfg.model;
   });
 
+  /** Returns the display name of the model currently selected, to be stamped on a reply message. */
+  private getModelName(): string {
+    const cfg = this.morphConfig();
+    const item = cfg.modelsList?.find((m) => m.model === cfg.model);
+    return item?.display ?? cfg.model ?? 'MorphLLM';
+  }
+
   async ngOnInit() {
     await this.morphApiService.waitForLoad();
     this.refreshConfig();
@@ -197,6 +204,7 @@ export class App implements OnInit {
       sender: 'assistant',
       content: '',
       timestamp: Date.now(),
+      modelName: this.getModelName(),
     };
 
     // Replace the message in the list with a new object on every update.

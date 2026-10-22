@@ -78,13 +78,59 @@
   border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
-/* Fenced code blocks */
-.prose-ai pre {
-  position: relative;
+/* Language label badge — now part of the real header bar */
+.prose-ai .code-block-wrapper {
   margin: 0.75em 0;
   border-radius: 10px;
-  border: 1px solid rgba(51, 65, 85, 0.8); /* slate-700 */
+  border: 1px solid rgba(51, 65, 85, 0.8);
   overflow: hidden;
+}
+
+.prose-ai .code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3em 0.75em;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  min-height: 2rem;
+}
+
+.prose-ai .code-lang-badge {
+  font-size: 0.7em;
+  font-family: ui-monospace, monospace;
+  color: #64748b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.prose-ai .copy-code-btn {
+  font-size: 0.72em;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: 5px;
+  padding: 0.15em 0.55em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  line-height: 1.6;
+}
+
+.prose-ai .copy-code-btn:hover {
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.4);
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.prose-ai .copy-code-btn.copied {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+/* Remove old top margin from pre since wrapper handles it */
+.prose-ai pre {
+  margin: 0;
 }
 
 .prose-ai pre code {
@@ -98,23 +144,7 @@
   color: #e6edf3;
 }
 
-/* Language label badge */
-.prose-ai pre::before {
-  content: attr(data-lang);
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 0.2em 0.65em;
-  font-size: 0.7em;
-  font-family: ui-monospace, monospace;
-  color: #64748b; /* slate-500 */
-  background: rgba(15, 23, 42, 0.9);
-  border-bottom-left-radius: 8px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
 
-/* Lists */
 .prose-ai ul, .prose-ai ol {
   padding-left: 1.5em;
   margin: 0.5em 0;
